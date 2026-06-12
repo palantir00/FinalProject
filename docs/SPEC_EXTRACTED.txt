@@ -1,0 +1,132 @@
+﻿PRACA INZYNIERSKA1) TytuĹ‚Gesture-to-Geometry: od rozpoznania gestĂłw do proceduralnej syntezy i analizy bryĹ‚ 3D
+2) Cel i â€ždlaczego to jest dobreâ€ť
+Cel: umoĹĽliwiÄ‡ uĹĽytkownikowi tworzenie i modyfikacjÄ™ bryĹ‚ 3D wyĹ‚Ä…cznie gestami rÄ…k (kamera), z natychmiastowÄ… analizÄ… geometrycznÄ… (pole, objÄ™toĹ›Ä‡, siatki, przekroje) i trybem AR.
+WyrĂłĹĽniki:
+100% w przeglÄ…darce (Ĺ‚atwy dostÄ™p, brak instalacji).
+PĹ‚ynnoĹ›Ä‡ i niskie opĂłĹşnienia (target: â‰Ą30 FPS, latency <120 ms).
+Edukacyjny â€žpakiet analitycznyâ€ť + eksport STL/OBJ (druk 3D).
+Opcjonalny moduĹ‚ â€žrobotykiâ€ť: sterowanie ramieniem/rysikiem do rysowania siatek/przekrojĂłw na kartce (most do specjalizacji).
+3) Zakres funkcji (MVP â†’ Pro â†’ Wow)
+MVP (8â€“10 tygodni)
+Gesty dĹ‚oni (np. MediaPipe Hands): rozpoznanie chwytĂłw i pozycji palcĂłw.
+Proceduralne bryĹ‚y: szeĹ›cian, prostopadĹ‚oĹ›cian, kula, walec, stoĹĽek, ostrosĹ‚up.
+Operacje: tworzenie, obrĂłt, skalowanie, przesuniÄ™cie (gestami jednej/dwĂłch rÄ…k).
+Analizy: pole/objÄ™toĹ›Ä‡, dĹ‚ugoĹ›ci krawÄ™dzi (autolabels), siatka krawÄ™dzi.
+Smoothing toru gestĂłw (np. One-Euro Filter), kalibracja dĹ‚oni.
+UI: tutorial gestĂłw, podglÄ…d FPS/latency.
+Pro (dodajesz w trakcie)
+Przekroje pĹ‚aszczyznÄ… (interaktywne â€žprzesuwanieâ€ť przekroju gestem).
+ĹÄ…czenie bryĹ‚ i proste CSG (union/difference/intersection).
+Eksport STL/OBJ/GLB + import scen.
+AR/WebXR: podglÄ…d bryĹ‚y w otoczeniu (kamera laptopa/telefonu).
+â€žTryb naukiâ€ť: quiz (zbuduj bryĹ‚Ä™ X w <N> gestĂłw; ocena).
+Wow (opcjonalnie)
+Rozpoznawanie szkicu 2D (na kartce) â†’ rekonstrukcja 3D (ekstruzja/obrys).
+Segmentacja realnych obiektĂłw i dopasowanie bryĹ‚ â€žbest-fitâ€ť.
+Integracja z mini ramieniem robotycznym/plotterem: odtworzenie siatki/przekroju na papierze.
+4) Architektura i stack
+Front (Web)
+Three.js â€“ render 3D, materiaĹ‚y/siatki, CSG (np. trzymaj wĹ‚asnÄ… warstwÄ™ prostych operacji lub lekkÄ… bibliotekÄ™ CSG).
+WebRTC/MediaStream â€“ kamera.
+MediaPipe Hands (lub TensorFlow.js HandPose) â€“ kluczowe punkty dĹ‚oni, confidence.
+WebXR (opcjonalnie) â€“ AR tryb.
+TypeScript + Vite/Next.js â€“ porzÄ…dek i DX.
+Silnik gestĂłw
+Warstwa interpretacji (mapping): surowe landmarki â†’ stany gestĂłw (pinch, grab, rotate, two-hand scale).
+Stabilizacja: One-Euro Filter + median smoothing + odrzucanie outlierĂłw (po confidence).
+FSM do sterowania trybami (Create / Transform / Measure / Slice / CSG).
+ModuĹ‚ analityczny
+Geometria: obliczenia pola/objÄ™toĹ›ci (siatka trĂłjkÄ…tĂłw), dĹ‚ugoĹ›ci krawÄ™dzi, kÄ…ty.
+Przekroje: przeciÄ™cie siatki trĂłjkÄ…towej pĹ‚aszczyznÄ… â†’ linie krawÄ™dzi przekroju.
+Siatki rozwijalne (dla pryzmatĂłw/ostrosĹ‚upĂłw/walca/stoĹĽka â€“ wersje klasyczne).
+Backend (opcjonalnie)
+Tylko jeĹ›li chcesz chmurÄ™/profilowanie/udostÄ™pnianie scen: FastAPI/Node (zapis scen, benchmarki, galeria).
+Robotyka (opcjonalnie)
+Micro-ROS/ROS2 lub prosty serial do plottera/ramienia; odwzorowanie przekroju/siatki.
+5) Repozytorium â€“ struktura
+gesture-geometry/
+  app/                    # front (TS + Three.js)
+    src/
+      cv/                 # MediaPipe, filtry, mapping
+      gestures/           # definicje gestĂłw, FSM
+      geometry/           # generatory bryĹ‚, CSG-lite, przekroje, analizy
+      ui/                 # HUD, tutorial, overlay
+      xr/                 # AR/WebXR (opc.)
+      export/             # STL/OBJ/GLB
+      utils/
+    public/
+  docs/
+    thesis/               # LaTeX pracy
+    figures/              # zrzuty, diagramy
+  benchmarks/
+    scripts/              # pomiary FPS/latency, logi
+    results/              # CSV, wykresy
+  robotics/               # (opc.) sterownik plottera/ramienia
+  tests/
+    unit/                 # testy geometrii
+    e2e/                  # scenariusze interakcji (Playwright)
+  .github/workflows/      # CI: lint, build, tests
+  README.md
+6) Metodologia badaĹ„ i mierniki (do rozdz. â€žEwaluacjaâ€ť)
+WydajnoĹ›Ä‡ (techniczna)
+FPS (target â‰Ą30), latency end-to-end (kameraâ†’gestâ†’render, target <120 ms).
+ZuĹĽycie CPU/GPU/RAM (profil: devtools + WebGL insights).
+StabilnoĹ›Ä‡ rozpoznania: % klatek z poprawnym stanem gestu (na zestawie kontrolnym).
+SkutecznoĹ›Ä‡/UX (uĹĽytkownicy)
+Czas wykonania zadania (np. â€žutwĂłrz walec o wys. 4 i r=2, pokaĹĽ przekrĂłj poziomyâ€ť).
+Liczba bĹ‚Ä™dĂłw/gestĂłw â€žniezrozumianychâ€ť.
+SUS (System Usability Scale) + krĂłtkie NPS.
+Dla edukacji: test krĂłtki przed/po (rozumienie siatek/przekrojĂłw).
+Ablacje
+PorĂłwnanie rĂłĹĽnych filtrĂłw (brak vs One-Euro vs median).
+Z i bez kalibracji dĹ‚oni / adaptacji oĹ›wietlenia.
+RĂłĹĽne urzÄ…dzenia (laptop/telefon).
+7) Harmonogram (12â€“16 tygodni â€“ przykĹ‚ad)
+T1: Analiza, koncepcja gestĂłw, szkice UI, wybĂłr stacku, plan testĂłw.
+T2â€“T3: Pipeline wideo + MediaPipe + smoothing + prototyp â€žwskaĹşnik dĹ‚oniâ€ť.
+T4: Generowanie bryĹ‚ i podstawowe transformacje gestami (MVP).
+T5: ModuĹ‚ analityczny (pole/objÄ™toĹ›Ä‡/etykiety) + testy jednostkowe.
+T6: Przekroje, siatki, eksport STL/OBJ, snapshot scen.
+T7: UX: tutorial gestĂłw, overlay instrukcji, tryb Edu.
+T8: AR/WebXR (opcjonalnie) + stabilizacja i optymalizacje.
+T9: Badania uĹĽytkownikĂłw (SUS, czasy), benchmarki techniczne.
+T10: Pisanie pracy + zrzuty, wykresy, dyskusja wynikĂłw.
+T11â€“T12: Poprawki, polish, demo na obronÄ™.(JeĹ›li masz caĹ‚y semestr â€“ rozciÄ…gnij i dodaj â€žWowâ€ť.)
+8) RozdziaĹ‚y pracy (propozycja spisu treĹ›ci)
+WstÄ™p, motywacja, cele
+Podstawy: rozpoznawanie gestĂłw dĹ‚oni, przetwarzanie wideo, model 3D
+Prace pokrewne (gest-driven modeling, edukacyjne wizualizacje, AR)
+Projekt systemu (architektura, FSM gestĂłw, filtry, moduĹ‚ geometrii)
+Implementacja (stack, API gestĂłw, generatory bryĹ‚, CSG, przekroje, AR)
+Ewaluacja (metody, wyniki techniczne i UX, ablacje)
+Studium przypadku edukacyjnego (mini-lekcje, quizy)
+Wnioski, ograniczenia, kierunki rozwoju
+ZaĹ‚Ä…czniki (instrukcja, repo, link do wersji demo)
+9) ProtokĂłĹ‚ gestĂłw (konkretny, Ĺ‚atwy do obrony)
+Create: â€žpinchâ€ť kciuk-wskazujÄ…cy w powietrzu â†’ menu bryĹ‚ (kĂłĹ‚ko/siatka ikon).
+Move: otwarta dĹ‚oĹ„ â†’ translacja w osi ekranu.
+Rotate: zaciĹ›niÄ™ta piÄ™Ĺ›Ä‡ â†’ obrĂłt wokĂłĹ‚ osi patrzenia; dwie dĹ‚onie â†’ obrĂłt swobodny.
+Scale: dwie dĹ‚onie â€žrozciÄ…ganieâ€ť â†’ skala jednolita; â€žpstrykâ€ť â†’ zatwierdĹş.
+Slice: dĹ‚oĹ„ poziomo â†’ aktywuj pĹ‚aszczyznÄ™; przesuwanie dĹ‚oniÄ… â†’ poĹ‚oĹĽenie przekroju.
+Measure: gest â€žLâ€ť (kciuk+wskazujÄ…cy) â†’ wĹ‚Ä…cz/wyĹ‚Ä…cz etykiety.
+10) Testy i narzÄ™dzia
+Jednostkowe: obliczenia pola/objÄ™toĹ›ci na znanych siatkach (tolerancja bĹ‚Ä™du).
+E2E: nagrane sekwencje wideo z gestami (powtarzalnoĹ›Ä‡).
+Profilowanie: Chrome DevTools (Performance), WebGL profiler.
+Lint/CI: ESLint, Vitest/Playwright, GitHub Actions.
+11) Ryzyka i obejĹ›cia
+NiestaĹ‚e rozpoznanie (Ĺ›wiatĹ‚o/tĹ‚o) â†’ kalibracja, prĂłg confidence, filtry, jasne instrukcje.
+CSG/mesh ops zbyt ciÄ™ĹĽkie â†’ ograniczenie do prymitywĂłw i prostych booleanĂłw, redukcja siatki.
+WebXR rĂłĹĽna kompatybilnoĹ›Ä‡ â†’ AR jako â€žnice-to-haveâ€ť; fallback: pseudo-AR (video background + overlay).
+UĹĽytkownicy leworÄ™czni â†’ tryb leworÄ™czny + rekalibracja.
+12) WÄ…tek â€žrobotyka i systemy inteligentneâ€ť (jak podkreĹ›liÄ‡ na obronie)
+Percepcja (vision), interpretacja (FSM + filtracja sygnaĹ‚u), dziaĹ‚anie (sterowanie scenÄ… / robotem).
+(Opcjonalnie) mini-ramiÄ™/plotter: mapowanie 3Dâ†’2D i kontrola ruchu (trajektoria rysowania siatki).
+13) Etyka i dostÄ™pnoĹ›Ä‡
+PrywatnoĹ›Ä‡: przetwarzanie on-device, brak wysyĹ‚ki obrazu.
+DostÄ™pnoĹ›Ä‡: tryb â€žmycha+klawiaturaâ€ť jako alternatywa gestĂłw; wysokie kontrasty, napisy.
+14) MateriaĹ‚y do obrony
+90-sek. demo: stworzenie walca â†’ przekrĂłj â†’ eksport STL.
+Wykres: FPS vs rodzaj filtra; SUS wyniki (boxplot); heatmapa bĹ‚Ä™dĂłw gestĂłw.
+KrĂłtka checklista â€žco dziaĹ‚aâ€ť i â€žco dodam po obronieâ€ť.
+
