@@ -1,0 +1,34 @@
+# Pick-and-place environment (gesture_bc.sim.pick_place_env.PickPlaceConfig).
+# Every key is optional: a missing key keeps the default from PickPlaceConfig.
+# Units: meters, seconds, Hz.
+
+# Control
+control_hz: 20               # policy steps per second (physics runs at 500 Hz)
+max_episode_steps: 300       # 15 s
+max_step_m: 0.015            # TCP move per step for action 1.0 (0.3 m/s)
+workspace_low: [0.30, -0.30, 0.012]
+workspace_high: [0.70, 0.30, 0.35]
+max_target_lead_m: 0.04      # how far the TCP target may run ahead of the real TCP
+start_tcp_pos: [0.45, 0.0, 0.30]
+
+# Randomization (x, y)
+cube_spawn_low: [0.40, -0.20]
+cube_spawn_high: [0.65, 0.20]
+target_spawn_low: [0.40, -0.20]
+target_spawn_high: [0.65, 0.20]
+min_cube_target_distance: 0.12
+
+# Success
+success_radius: 0.03         # cube center to target center, in the table plane
+
+# Robustness tests (off for normal data collection)
+obs_noise_std: 0.0
+include_velocity: false
+perturb_cube: false
+perturb_step_range: [10, 40]
+perturb_distance_range: [0.03, 0.06]
+
+# Videos
+render_camera: angled        # front | angled | top
+render_width: 640
+render_height: 480
