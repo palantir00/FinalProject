@@ -19,12 +19,16 @@ TARGET_BODY = "target"
 # its z axis (Franka's documented TCP offset; it matches the pad geoms in panda.xml).
 TCP_OFFSET_M = 0.1034
 
-# Arm configuration of the Menagerie "home" keyframe: gripper above the table, pointing down.
+# Arm configuration of the Menagerie "home" keyframe: gripper above the table, pointing down,
+# fingers closing along the world x axis. (Turning the hand by 90 deg, so the fingers close
+# along y, was tested: sideways accelerations then push both fingers along their slide axis
+# and a fast-carried cube falls out of the grasp; see test_grasp_survives_a_fast_carry.)
 HOME_ARM_QPOS = np.array([0.0, 0.0, 0.0, -1.57079, 0.0, 1.57079, -0.7853])
 
 # Gripper actuator command (Menagerie maps 0..0.04 m finger travel to 0..255).
 GRIPPER_OPEN_CTRL = 255.0
 GRIPPER_CLOSED_CTRL = 0.0
+GRIPPER_STIFFNESS_SCALE = 10.0  # see build_model()
 # Each finger slides 0..0.04 m, so the gripper opening (sum of both) is 0..0.08 m.
 FINGER_OPEN_QPOS = 0.04
 LEFT_FINGER_BODY = "left_finger"
@@ -49,6 +53,15 @@ def build_model() -> mujoco.MjModel:
     for body in panda.bodies:
         if body.name != "world":
             body.gravcomp = 1.0
+
+    # Stiffer gripper. The Menagerie gripper is a position servo with stiffness 100 N/m: when
+    # "closed" on a 5 cm cube it squeezes with only ~2.5 N, and the cube slips and turns in the
+    # fingers while it is lifted. Scaling stiffness and damping by GRIPPER_STIFFNESS_SCALE keeps
+    # the 0..255 command range but gives ~25 N (the real Franka Hand holds up to 70 N).
+    gripper = panda.actuator(GRIPPER_ACTUATOR)
+    gripper.gainprm[0] *= GRIPPER_STIFFNESS_SCALE  # force per unit of command
+    gripper.biasprm[1] *= GRIPPER_STIFFNESS_SCALE  # -stiffness (N per m of finger travel)
+    gripper.biasprm[2] *= GRIPPER_STIFFNESS_SCALE  # -damping
 
     # Attaching (instead of an XML <include>) lets MuJoCo resolve the Panda's mesh files
     # relative to panda.xml, wherever our scene file lives.

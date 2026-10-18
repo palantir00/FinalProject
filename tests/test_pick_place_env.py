@@ -192,6 +192,30 @@ def test_scripted_pick_and_place_succeeds(env):
     assert info["is_success"]
 
 
+@pytest.mark.parametrize("seed", [3, 7, 11])
+def test_grasp_survives_a_fast_carry(env, seed):
+    """Physics regression test: lift and carry at full speed, the cube stays in the fingers.
+
+    With a 2 ms timestep (or fingers closing along y) the cube drifted by 1-20 cm here.
+    """
+    obs, _ = env.reset(seed=seed)
+    cube = obs["cube_pos"].copy()
+    move_to(env, cube + [0.0, 0.0, 0.10], OPEN)
+    move_to(env, cube, OPEN)
+    obs, _ = hold(env, CLOSE, 10)
+    offset_at_grasp = obs["tcp_to_cube"].copy()
+
+    for _ in range(12):  # lift at full speed
+        env.step([0.0, 0.0, 1.0, CLOSE])
+    towards_center = [1.0 if cube[0] < 0.5 else -1.0, 1.0 if cube[1] < 0 else -1.0]
+    for _ in range(20):  # carry diagonally at full speed
+        env.step([*towards_center, 0.0, CLOSE])
+    obs, info = hold(env, CLOSE, 10)
+
+    assert info["is_grasping"]
+    assert np.linalg.norm(obs["tcp_to_cube"] - offset_at_grasp) < 0.01  # drift below 1 cm
+
+
 def test_success_requires_cube_in_zone_and_released(env):
     _, info = env.reset(seed=0, options={"cube_xy": [0.5, 0.0], "target_xy": [0.5, 0.0]})
     assert info["is_success"]  # cube on the target, gripper open

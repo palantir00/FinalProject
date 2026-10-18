@@ -9,9 +9,13 @@
   <!--
     implicitfast: same integrator as the Menagerie Panda (stable with stiff position servos).
     Elliptic friction cones + higher impratio make grasps less slippery (recommended by the
-    MuJoCo docs for manipulation). The 2 ms timestep is the Menagerie default.
+    MuJoCo docs for manipulation).
+    Timestep 1 ms instead of the Menagerie default 2 ms: measured with a fast lift-and-carry
+    test, the cube drifts in the grasp by ~10 mm at 2 ms and ~4 mm at 1 ms (the drift halves
+    with every halving of the timestep, so it is a discretization effect). Cost: ~0.5 ms more
+    per control step.
   -->
-  <option timestep="0.002" integrator="implicitfast" cone="elliptic" impratio="10"/>
+  <option timestep="0.001" integrator="implicitfast" cone="elliptic" impratio="10"/>
 
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
