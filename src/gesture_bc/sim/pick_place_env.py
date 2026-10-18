@@ -38,7 +38,9 @@ class PickPlaceConfig:
 
     # Control: the policy acts 20 times per second, physics runs at 500 Hz in between.
     control_hz: int = 20
-    max_episode_steps: int = 300  # 15 s
+    # 30 s. The same limit is used to evaluate every policy, so it must leave room for slow
+    # (human) demonstrations; it will be checked against the recorded demo lengths.
+    max_episode_steps: int = 600
     # Action 1.0 on an axis moves the TCP target by this distance per step [m]
     # (0.015 m * 20 Hz = 0.3 m/s maximum speed).
     max_step_m: float = 0.015

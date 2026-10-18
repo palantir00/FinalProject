@@ -4,7 +4,7 @@
 
 # Control
 control_hz: 20               # policy steps per second (physics runs at 500 Hz)
-max_episode_steps: 300       # 15 s
+max_episode_steps: 600       # 30 s; same limit for every policy, must fit slow human demos
 max_step_m: 0.015            # TCP move per step for action 1.0 (0.3 m/s)
 workspace_low: [0.30, -0.30, 0.012]
 workspace_high: [0.70, 0.30, 0.35]
