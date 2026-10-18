@@ -1,15 +1,18 @@
 """Drive the pick-and-place environment with the keyboard (debugging, manual testing).
 
-The window starts with the "front" camera: you look at the robot across the table, like in
-a mirror. Keys (click the window first; hold a key to keep moving):
-    W / S    move the gripper away from you / towards you
-    A / D    move left / right (as seen on the screen)
-    R / F    move up / down
-    SPACE    close / open the gripper
-    N        new episode (next seed)
-    C        switch camera (front, angled, top)
-    V        start / stop recording a video to results/videos/
-    ESC / Q  quit
+Two views side by side:
+    left   "front":  you face the robot across the table, like a mirror (control view)
+    right  "angled": shows depth and the fingers opening/closing (C switches it to "top")
+
+Keys (click the window first; hold a key to keep moving):
+    LEFT / RIGHT  or  A / D    move left / right (as seen in the front view)
+    UP / DOWN     or  R / F    move up / down
+    W / S                      move away from you / towards you
+    SPACE                      close / open the gripper (tap it)
+    N                          new episode (next seed)
+    C                          right view: angled / top
+    V                          start / stop recording the angled view to results/videos/
+    ESC / Q                    quit
 
 Usage (repository root, .venv activated):
     python scripts/view_env.py
@@ -32,51 +35,93 @@ from gesture_bc.sim.rendering import VideoWriter, draw_text_lines
 from gesture_bc.utils.config import load_config
 
 WINDOW = "gesture_bc: pick and place (keyboard)"
-CAMERAS = ["front", "angled", "top"]
+CONTROL_CAMERA = "front"
+SIDE_CAMERAS = ["angled", "top"]
+VIDEO_CAMERA = "angled"
 VIDEO_DIR = Path("results/videos")
 ESC = 27
+# Holding a key makes Windows repeat it; ignore SPACE for this long after a toggle,
+# so one press toggles the gripper exactly once.
+GRIPPER_TOGGLE_COOLDOWN_S = 0.5
+
+# cv2.waitKeyEx returns the full key code; arrow-key codes differ between platforms.
+ARROW_KEYS = {
+    2424832: "left",  # Windows
+    2490368: "up",
+    2555904: "right",
+    2621440: "down",
+    65361: "left",  # Linux (GTK)
+    65362: "up",
+    65363: "right",
+    65364: "down",
+}
 
 # Key -> direction of the TCP in world coordinates (x away from the robot base, y to the
 # robot's left, z up). In the front view +y is screen right and -x is "into the screen".
 MOVE_KEYS = {
+    "left": np.array([0.0, -1.0, 0.0]),
+    "a": np.array([0.0, -1.0, 0.0]),
+    "right": np.array([0.0, 1.0, 0.0]),
+    "d": np.array([0.0, 1.0, 0.0]),
+    "up": np.array([0.0, 0.0, 1.0]),
+    "r": np.array([0.0, 0.0, 1.0]),
+    "down": np.array([0.0, 0.0, -1.0]),
+    "f": np.array([0.0, 0.0, -1.0]),
     "w": np.array([-1.0, 0.0, 0.0]),
     "s": np.array([1.0, 0.0, 0.0]),
-    "a": np.array([0.0, -1.0, 0.0]),
-    "d": np.array([0.0, 1.0, 0.0]),
-    "r": np.array([0.0, 0.0, 1.0]),
-    "f": np.array([0.0, 0.0, -1.0]),
 }
-HELP_LINE = "W/S in/out  A/D left/right  R/F up/down  SPACE grip  N new  C camera  V rec  ESC quit"
+HELP_LINE = (
+    "ARROWS or A/D R/F: left/right up/down   W/S: away/towards   SPACE: grip   "
+    "N: new   C: view   V: rec   ESC: quit"
+)
 
 
 def collect_keys(duration_s: float) -> set[str]:
-    """Keys pressed during the next duration_s seconds (lowercase; ESC as "esc").
+    """Names of the keys pressed during the next duration_s seconds.
 
     Reading keys for the whole control period keeps the loop at a fixed rate and empties
     the queue of auto-repeat events, so the robot stops as soon as a key is released.
+    Letters are lowercase; special keys are "left", "right", "up", "down", "esc", " ".
     """
     keys = set()
     end = time.perf_counter() + duration_s
-    while (remaining_ms := int((end - time.perf_counter()) * 1000)) > 0:
-        code = cv2.waitKey(remaining_ms)
-        if code == -1:
-            continue
-        code &= 0xFF
-        keys.add("esc" if code == ESC else chr(code).lower())
-    return keys
+    while True:
+        # Always wait at least 1 ms, even if rendering already used up the whole period:
+        # waitKeyEx is also where the window processes its events. A window that never
+        # gets here freezes and Windows reports it as "Not responding".
+        remaining_ms = max(1, int((end - time.perf_counter()) * 1000))
+        code = cv2.waitKeyEx(remaining_ms)
+        if code in ARROW_KEYS:
+            keys.add(ARROW_KEYS[code])
+        elif code != -1:
+            keys.add("esc" if code & 0xFF == ESC else chr(code & 0xFF).lower())
+        if time.perf_counter() >= end:
+            return keys
 
 
-def hud_lines(env, obs, info, seed, camera, gripper_closed, recording, episode_over) -> list[str]:
+def describe_keys(keys: set[str]) -> str:
+    if not keys:
+        return "-   (nothing happens? click the window first)"
+    return ", ".join(sorted("space" if key == " " else key for key in keys))
+
+
+def hud_lines(
+    env, obs, info, seed, keys, gripper_closed, recording, episode_over, loop_hz
+) -> list[str]:
     tcp = obs["tcp_pos"]
     cube_to_target_cm = np.linalg.norm(obs["cube_to_target"][:2]) * 100
+    too_slow = loop_hz < 0.75 * env.config.control_hz
     lines = [
-        f"seed {seed}   step {info['step']}/{env.config.max_episode_steps}   camera: {camera}"
+        f"seed {seed}   step {info['step']}/{env.config.max_episode_steps}   "
+        f"loop {loop_hz:.0f} Hz"
+        + ("  SLOW (GPU?)" if too_slow else "")
         + ("   [REC]" if recording else ""),
         f"TCP  x {tcp[0]:.3f}  y {tcp[1]:+.3f}  z {tcp[2]:.3f} m",
         f"gripper: {'CLOSED' if gripper_closed else 'open'} "
         f"({obs['gripper_opening'][0] * 100:.1f} cm)   grasping: "
         f"{'yes' if info['is_grasping'] else 'no'}",
         f"cube -> target: {cube_to_target_cm:.1f} cm",
+        f"keys: {describe_keys(keys)}",
     ]
     if info["is_success"]:
         lines.append("SUCCESS!  press N for a new episode")
@@ -103,15 +148,21 @@ def main() -> None:
         return
 
     print(__doc__)
-    camera_index = 0
+    side_index = 0
     gripper_closed = False
+    last_gripper_toggle = -np.inf
     episode_over = False
     video: VideoWriter | None = None
     keys: set[str] = set()
     period_s = 1.0 / config.control_hz
+    loop_hz = float(config.control_hz)
+    previous_tick = time.perf_counter()
 
     while True:
         tick_start = time.perf_counter()
+        # Smoothed loop rate (shown in the HUD; below 20 Hz the simulation runs slow-motion).
+        loop_hz = 0.9 * loop_hz + 0.1 / max(tick_start - previous_tick, 1e-6)
+        previous_tick = tick_start
         # 1) React to the keys pressed during the previous control period.
         if "esc" in keys or "q" in keys:
             break
@@ -121,7 +172,7 @@ def main() -> None:
             gripper_closed = False
             episode_over = False
         if "c" in keys:
-            camera_index = (camera_index + 1) % len(CAMERAS)
+            side_index = (side_index + 1) % len(SIDE_CAMERAS)
         if "v" in keys:
             if video is None:
                 path = VIDEO_DIR / f"keyboard_{datetime.now():%Y%m%d_%H%M%S}.mp4"
@@ -131,8 +182,9 @@ def main() -> None:
                 video.close()
                 print(f"Saved {video.path} ({video.n_frames} frames)")
                 video = None
-        if " " in keys:
+        if " " in keys and tick_start - last_gripper_toggle > GRIPPER_TOGGLE_COOLDOWN_S:
             gripper_closed = not gripper_closed
+            last_gripper_toggle = tick_start
 
         if not episode_over:
             move = sum((MOVE_KEYS[k] for k in keys if k in MOVE_KEYS), start=np.zeros(3))
@@ -140,18 +192,24 @@ def main() -> None:
             obs, _, terminated, truncated, info = env.step(action)
             episode_over = terminated or truncated
 
-        # 2) Show the scene (and record it without the text overlay).
-        camera = CAMERAS[camera_index]
-        frame = env.render_camera(camera)
+        # 2) Show both views; record the angled view without text overlays.
+        side_camera = SIDE_CAMERAS[side_index]
+        control_view = env.render_camera(CONTROL_CAMERA)
+        side_view = env.render_camera(side_camera)
         if video is not None:
-            video.add(frame)
+            video.add(side_view if side_camera == VIDEO_CAMERA else env.render_camera(VIDEO_CAMERA))
+
         lines = hud_lines(
-            env, obs, info, seed, camera, gripper_closed, video is not None, episode_over
+            env, obs, info, seed, keys, gripper_closed, video is not None, episode_over, loop_hz
         )
         color = (80, 255, 80) if info["is_success"] else (255, 255, 255)
-        shown = draw_text_lines(frame, lines, color=color)
-        shown = draw_text_lines(shown, [HELP_LINE], origin=(10, shown.shape[0] - 12))
-        cv2.imshow(WINDOW, cv2.cvtColor(shown, cv2.COLOR_RGB2BGR))
+        control_view = draw_text_lines(control_view, lines, color=color)
+        side_view = draw_text_lines(side_view, [f"view: {side_camera}  (C to switch)"])
+        window_image = np.hstack([control_view, side_view])
+        window_image = draw_text_lines(
+            window_image, [HELP_LINE], origin=(10, window_image.shape[0] - 12)
+        )
+        cv2.imshow(WINDOW, cv2.cvtColor(window_image, cv2.COLOR_RGB2BGR))
 
         # 3) Wait for the rest of the control period, collecting key presses.
         keys = collect_keys(period_s - (time.perf_counter() - tick_start))
