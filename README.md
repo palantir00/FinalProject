@@ -26,3 +26,48 @@ npm run dev
 - `app/src/three/SceneManager.ts`: Three.js scena + pętla render
 - `app/src/geometry/analytics.ts`: pole/objętość (sześcian, kula, walec)
 - `app/src/ui/*`: HUD (autolabels) + tutorial overlay (MVP)
+
+---
+
+## Robot learning from hand-gesture demonstrations (work in progress)
+
+New thesis direction: a simulated Franka Panda arm (MuJoCo) is teleoperated with hand gestures
+tracked by an RGB camera (MediaPipe), the demonstrations are recorded, and a policy is trained
+with behavior cloning (MLP and a small Transformer with action chunking).
+The Python code lives in `src/gesture_bc/`.
+
+### Setup (Windows, PowerShell)
+
+Requires Python 3.11 or 3.12 and, for GPU training, an NVIDIA driver supporting CUDA 13.0.
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+
+# PyTorch with CUDA comes from PyTorch's own package index
+pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
+
+# Exact versions used in the experiments, then this project in editable mode
+pip install -r requirements-lock.txt
+pip install -e . --no-deps
+
+# Download the Franka Panda model (~36 MB, not stored in this repository)
+python scripts/fetch_assets.py
+
+# Check the environment: versions, GPU, MuJoCo viewer, camera
+python scripts/check_setup.py
+
+# Lint and tests
+ruff check .
+pytest
+```
+
+### Third-party assets
+
+- **Franka Emika Panda model**: from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie/tree/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/franka_emika_panda)
+  (commit `62ab00f`), developed by Franka Emika and derived from the
+  [franka_ros](https://github.com/frankaemika/franka_ros) description. Licensed under the
+  [Apache License 2.0](https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/franka_emika_panda/LICENSE).
+  The model is not redistributed here: `scripts/fetch_assets.py` downloads it, together with its
+  license file, from the pinned commit.
