@@ -58,13 +58,20 @@ python scripts/fetch_assets.py
 # Check the environment: versions, GPU, MuJoCo viewer, camera
 python scripts/check_setup.py
 
-# Drive the robot with the keyboard (W/S/A/D/R/F move, SPACE grip, V record video)
+# Drive the robot with the keyboard (arrows: left/right/up/down, W/S: away/towards,
+# SPACE: gripper, V: record video)
 python scripts/view_env.py
 
 # Lint and tests
 ruff check .
 pytest
 ```
+
+**Laptops with two GPUs (Intel + NVIDIA):** Windows may run Python's OpenGL on the integrated
+GPU, where a frame takes ~60 ms instead of ~2 ms and the windows become unusable.
+`check_setup.py` detects this. Fix: *Settings > System > Display > Graphics > Add desktop app*,
+choose the base `python.exe` of Python 3.12 (`check_setup.py` prints its path), then
+*Options > High performance*.
 
 ### Third-party assets
 
