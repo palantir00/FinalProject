@@ -482,3 +482,6 @@ src/gesture_bc/sim/assets/franka_emika_panda.partial/
 *.mov
 *.mkv
 *.webm
+
+# MuJoCo writes warnings to this file in the current directory
+MUJOCO_LOG.TXT
