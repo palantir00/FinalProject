@@ -39,5 +39,6 @@ jobs:
           ruff check .
           ruff format --check .
 
-      - name: Tests (pytest, no GUI)
-        run: pytest -m "not gui"
+      # Runners have no display and no GPU, so window and OpenGL tests only run locally.
+      - name: Tests (pytest, no GUI / rendering)
+        run: pytest -m "not gui and not render"

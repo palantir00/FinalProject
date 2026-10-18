@@ -60,4 +60,5 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "gui: needs a display (viewer or camera window); skipped in CI",
+    "render: needs OpenGL for offscreen rendering; skipped in CI",
 ]
