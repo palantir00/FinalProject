@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gesture-bc"
+version = "0.1.0"
+description = "Behavior cloning for a simulated Franka Panda arm from hand-gesture teleoperation demonstrations"
+readme = "README.md"
+# MediaPipe is the bottleneck: no Python 3.13 support is assumed in this project.
+requires-python = ">=3.11,<3.13"
+# Minimum versions = versions this project was tested with.
+# Exact versions for reproducible experiments are pinned in requirements-lock.txt.
+dependencies = [
+    # Install the CUDA build of torch first (see README); pip then treats this as satisfied.
+    "torch>=2.14",
+    "mujoco>=3.14",
+    "numpy>=2.0",
+    # mediapipe >= 1.0 only has the Tasks API (HandLandmarker); mp.solutions is gone.
+    "mediapipe>=1.0",
+    # Same OpenCV distribution that mediapipe depends on. Never install opencv-python
+    # next to it: both provide the `cv2` module and overwrite each other.
+    "opencv-contrib-python>=5.0",
+    "h5py>=3.11",
+    "pyyaml>=6.0",
+    "matplotlib>=3.9",
+    "gymnasium>=1.3",
+    "imageio[ffmpeg]>=2.38",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.16",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["app"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes: unused imports/variables, undefined names
+    "I",    # isort: import order
+    "B",    # flake8-bugbear: likely bugs (mutable defaults, ...)
+    "UP",   # pyupgrade: modern Python syntax
+    "SIM",  # flake8-simplify
+    "NPY",  # NumPy-specific rules (e.g. legacy np.random API)
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "gui: needs a display (viewer or camera window); skipped in CI",
+]

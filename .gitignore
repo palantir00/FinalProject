@@ -449,3 +449,36 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ===========================================================================
+# Python / robot learning (gesture_bc)
+# ===========================================================================
+# Virtual environment and tool caches
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Third-party assets downloaded by scripts/fetch_assets.py (not redistributed)
+src/gesture_bc/sim/assets/franka_emika_panda/
+src/gesture_bc/sim/assets/franka_emika_panda.partial/
+
+# MediaPipe model files (downloaded, not versioned)
+*.task
+
+# Demonstrations, training runs, checkpoints. The leading "/" matters: a bare
+# "data/" would also hide the src/gesture_bc/data/ package.
+/data/
+/runs/
+*.hdf5
+*.h5
+*.pt
+*.pth
+*.ckpt
+
+# Videos are never committed (a small GIF for the README is fine)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
