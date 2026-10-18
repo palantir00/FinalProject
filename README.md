@@ -58,6 +58,9 @@ python scripts/fetch_assets.py
 # Check the environment: versions, GPU, MuJoCo viewer, camera
 python scripts/check_setup.py
 
+# Drive the robot with the keyboard (W/S/A/D/R/F move, SPACE grip, V record video)
+python scripts/view_env.py
+
 # Lint and tests
 ruff check .
 pytest
