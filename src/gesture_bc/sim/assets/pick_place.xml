@@ -1,0 +1,75 @@
+<!--
+  Pick-and-place scene: a table, one cube, one target zone, cameras and lights.
+
+  World frame: x points forward (away from the robot base), y to the robot's left, z up.
+  The table top is the plane z = 0. The Franka Panda (MuJoCo Menagerie, downloaded by
+  scripts/fetch_assets.py) is not in this file: scene.py attaches it at the origin.
+-->
+<mujoco model="pick_place">
+  <!--
+    implicitfast: same integrator as the Menagerie Panda (stable with stiff position servos).
+    Elliptic friction cones + higher impratio make grasps less slippery (recommended by the
+    MuJoCo docs for manipulation). The 2 ms timestep is the Menagerie default.
+  -->
+  <option timestep="0.002" integrator="implicitfast" cone="elliptic" impratio="10"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="160" elevation="-25" offwidth="1280" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="floor" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="floor" texture="floor" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+    <material name="table_top" rgba="0.55 0.42 0.30 1"/>
+    <material name="table_leg" rgba="0.35 0.27 0.20 1"/>
+    <material name="cube" rgba="0.85 0.15 0.15 1"/>
+    <material name="target" rgba="0.15 0.75 0.25 0.6"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0.5 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" type="plane" size="0 0 0.05" pos="0 0 -0.75" material="floor"/>
+
+    <!-- Table: top surface at z = 0, from x = -0.25 to 0.95 and y = -0.6 to 0.6. -->
+    <geom name="table_top" type="box" size="0.6 0.6 0.02" pos="0.35 0 -0.02" material="table_top"/>
+    <geom type="box" size="0.03 0.03 0.355" pos="-0.2 -0.55 -0.395" material="table_leg"/>
+    <geom type="box" size="0.03 0.03 0.355" pos="-0.2 0.55 -0.395" material="table_leg"/>
+    <geom type="box" size="0.03 0.03 0.355" pos="0.9 -0.55 -0.395" material="table_leg"/>
+    <geom type="box" size="0.03 0.03 0.355" pos="0.9 0.55 -0.395" material="table_leg"/>
+
+    <!-- Cube: 5 cm, 50 g. condim 4 adds torsional friction, so a grasped cube does not spin. -->
+    <body name="cube" pos="0.5 0 0.025">
+      <freejoint name="cube_joint"/>
+      <geom name="cube" type="box" size="0.025 0.025 0.025" mass="0.05" material="cube"
+        condim="4" friction="1 0.005 0.0001"/>
+    </body>
+
+    <!--
+      Target zone: visual only (contype/conaffinity 0, so nothing collides with it).
+      It is a mocap body only so the environment can move it at every reset;
+      the robot is NOT controlled through mocap.
+    -->
+    <body name="target" mocap="true" pos="0.5 0.2 0.0005">
+      <geom name="target" type="cylinder" size="0.04 0.0005" material="target"
+        contype="0" conaffinity="0"/>
+    </body>
+
+    <!--
+      Cameras. xyaxes = the camera's x (screen right) and y (screen up) axes in world
+      coordinates; the camera looks along -z = -(x cross y).
+    -->
+    <!--
+      Facing the robot across the table, like a mirror: robot +y is screen right, +z is up,
+      +x comes towards the viewer. This matches a mirrored webcam image (teleoperation view).
+    -->
+    <camera name="front" pos="1.75 0 1.0" xyaxes="0 1 0 -0.472 0 0.881"/>
+    <!-- Three-quarter view of the whole robot and workspace (videos). -->
+    <camera name="angled" pos="1.45 -1.25 1.05" xyaxes="0.751 0.661 0 -0.286 0.325 0.901"/>
+    <!-- Straight down; the robot base is at the top of the image (debugging positions). -->
+    <camera name="top" pos="0.5 0 1.6" xyaxes="0 1 0 -1 0 0"/>
+  </worldbody>
+</mujoco>
