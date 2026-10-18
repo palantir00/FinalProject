@@ -1,14 +1,15 @@
 """Check that the development environment is ready.
 
-Four checks, from non-interactive to interactive:
-  1. versions  - Python and package versions, MediaPipe Tasks API.
-  2. pytorch   - is the CUDA GPU visible, and does it compute the same result as the CPU?
-  3. mujoco    - load the Franka Panda, measure simulation speed, open the viewer window.
-  4. camera    - open the webcam with OpenCV and show a live preview.
+Five checks, from non-interactive to interactive:
+  1. versions   - Python and package versions, MediaPipe Tasks API.
+  2. pytorch    - is the CUDA GPU visible, and does it compute the same result as the CPU?
+  3. mujoco     - load the Franka Panda, measure simulation speed, open the viewer window.
+  4. rendering  - offscreen rendering speed, and which GPU OpenGL runs on.
+  5. camera     - open the webcam with OpenCV and show a live preview.
 
 Usage (repository root, .venv activated):
     python scripts/check_setup.py              # all checks (opens two windows)
-    python scripts/check_setup.py --no-gui     # no windows: checks 1-2 and headless MuJoCo
+    python scripts/check_setup.py --no-gui     # no windows: checks 1-4, MuJoCo without viewer
     python scripts/check_setup.py --camera 1   # use another camera index
 """
 
@@ -165,7 +166,44 @@ def check_mujoco(show_viewer: bool) -> bool:
     return True
 
 
-# --- 4. camera ----------------------------------------------------------------------------
+# --- 4. offscreen rendering ---------------------------------------------------------------
+
+
+def check_rendering() -> bool:
+    """Render offscreen (as for videos) and report which GPU OpenGL runs on.
+
+    Laptops with two GPUs often give Python the integrated one by default; there a frame
+    takes ~60 ms instead of ~2 ms and interactive windows become unusable.
+    """
+    from OpenGL import GL  # PyOpenGL is installed together with mujoco
+
+    model = mujoco.MjModel.from_xml_path(str(require_panda_scene()))
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    renderer = mujoco.Renderer(model, height=480, width=640)
+    try:
+        renderer.update_scene(data)
+        renderer.render()  # the first frame also creates the OpenGL context
+        gl_renderer = GL.glGetString(GL.GL_RENDERER).decode()
+        start = time.perf_counter()
+        for _ in range(20):
+            renderer.update_scene(data)
+            renderer.render()
+        frame_ms = (time.perf_counter() - start) / 20 * 1000
+    finally:
+        renderer.close()
+
+    print(f"  OpenGL runs on: {gl_renderer}")
+    print(f"  one 640x480 frame: {frame_ms:.1f} ms")
+    if torch.cuda.is_available() and "NVIDIA" not in gl_renderer:
+        print("  An NVIDIA GPU is present, but OpenGL uses another (slow) GPU. Fix:")
+        print("  Settings > System > Display > Graphics > Add desktop app >")
+        print(f"  {sys._base_executable}  >  Options > High performance")
+        return False
+    return True
+
+
+# --- 5. camera ----------------------------------------------------------------------------
 
 
 def check_camera(index: int) -> bool:
@@ -225,6 +263,7 @@ def main() -> int:
         "versions": check_versions,
         "pytorch + cuda": check_torch,
         "mujoco": lambda: check_mujoco(show_viewer=not args.no_gui),
+        "rendering": check_rendering,
     }
     if not args.no_gui:
         checks["camera"] = lambda: check_camera(args.camera)
