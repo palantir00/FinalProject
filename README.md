@@ -62,6 +62,10 @@ python scripts/check_setup.py
 # SPACE: gripper, V: record video)
 python scripts/view_env.py
 
+# Scripted-expert demonstrations (100 episodes, DART noise 0.3; --noise-std 0 for clean data)
+python scripts/collect_expert.py --videos 3
+python scripts/inspect_dataset.py data/expert_100_noise0.3.hdf5 --replay 10
+
 # Lint and tests
 ruff check .
 pytest
