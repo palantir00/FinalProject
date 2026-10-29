@@ -81,7 +81,7 @@ def test_same_seed_and_actions_give_the_same_trajectory(env):
 
 def test_observation_layout(env):
     obs, _ = env.reset(seed=0)
-    assert list(obs) == OBS_KEYS
+    assert list(obs) == OBS_KEYS + ["tcp_vel"]  # velocity is on by default
     for key, value in obs.items():
         assert value.dtype == np.float32
         assert value.shape == env.observation_space[key].shape
@@ -89,7 +89,7 @@ def test_observation_layout(env):
     np.testing.assert_allclose(
         obs["cube_to_target"], obs["target_pos"] - obs["cube_pos"], atol=1e-6
     )
-    assert flatten_observation(obs, OBS_KEYS).shape == (16,)
+    assert flatten_observation(obs, env.obs_keys).shape == (19,)
 
 
 def test_observation_noise_only_when_enabled():
@@ -100,12 +100,15 @@ def test_observation_noise_only_when_enabled():
     assert 0.0 < error < 0.06  # noisy, but within ~6 sigma
 
 
-def test_velocity_observation_is_optional():
-    env_with_velocity = PickPlaceEnv(PickPlaceConfig(include_velocity=True))
-    env_with_velocity.reset(seed=0)
-    obs, *_ = env_with_velocity.step([1.0, 0.0, 0.0, OPEN])
+def test_velocity_observation(env):
+    env.reset(seed=0)
+    obs, *_ = env.step([1.0, 0.0, 0.0, OPEN])
     assert obs["tcp_vel"].shape == (3,)
     assert obs["tcp_vel"][0] > 0.05  # moving forward [m/s]
+
+    without_velocity = PickPlaceEnv(PickPlaceConfig(include_velocity=False))
+    obs, _ = without_velocity.reset(seed=0)
+    assert list(obs) == OBS_KEYS  # can be switched off, e.g. for an ablation
 
 
 # --- control ------------------------------------------------------------------------------------

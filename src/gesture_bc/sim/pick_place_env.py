@@ -67,7 +67,9 @@ class PickPlaceConfig:
 
     # Robustness tests (all off by default).
     obs_noise_std: float = 0.0  # Gaussian noise on the observed TCP and cube positions [m]
-    include_velocity: bool = False  # add the TCP velocity to the observation
+    # TCP velocity in the observation. On by default: the expert damps its motion with it,
+    # so a policy that imitates the expert must see it too (switch off for an ablation).
+    include_velocity: bool = True
     perturb_cube: bool = False  # push the cube aside once per episode, before the grasp
     perturb_step_range: tuple[int, int] = (10, 40)  # earliest step of the push
     perturb_distance_range: tuple[float, float] = (0.03, 0.06)  # [m]

@@ -23,7 +23,7 @@ success_radius: 0.03         # cube center to target center, in the table plane
 
 # Robustness tests (off for normal data collection)
 obs_noise_std: 0.0
-include_velocity: false
+include_velocity: true       # the expert damps its motion with the TCP velocity
 perturb_cube: false
 perturb_step_range: [10, 40]
 perturb_distance_range: [0.03, 0.06]
