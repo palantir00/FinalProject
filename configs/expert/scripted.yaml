@@ -14,10 +14,12 @@ place_clearance: 0.005     # gap under the cube when it is released
 xy_tolerance: 0.008
 z_tolerance: 0.005
 
-# Gripper timing (control steps of 50 ms)
-grasp_steps: 6
-release_steps: 4
+# Gripper decisions (all based on what the observation shows, no hidden counters)
+close_distance: 0.015      # start closing this far above the grasp height
+grasped_opening: 0.055     # opening below this: the fingers hold the 5 cm cube -> lift
+empty_grasp_opening: 0.01  # opening below this: closed on nothing -> try again
+released_opening: 0.065    # opening above this: the cube was let go
+max_grasp_steps: 20        # safety net for a grasp that never completes
 
 # Failure detection
-empty_grasp_opening: 0.01  # gripper closed on nothing
 lost_cube_distance: 0.03   # cube dropped while carrying

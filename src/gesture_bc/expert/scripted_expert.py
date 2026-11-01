@@ -2,16 +2,19 @@
 
 The expert sees only the observation, exactly like a learned policy. Its demonstrations are
 therefore a function a network can learn (no hidden information about the simulation).
+For the same reason every decision depends on what is observable (heights, distances, the
+gripper opening), not on hidden counters: a network cannot see how many steps the expert
+has already waited.
 
 Phases (in order):
     REACH     move above the cube, gripper open           -> DESCEND when above the cube
-    DESCEND   lower the open gripper around the cube      -> GRASP at grasp height
-                                                             (REACH again if the cube moved away)
-    GRASP     close the gripper and wait                  -> LIFT (REACH if it closed on nothing)
+    DESCEND   lower the gripper around the cube; start    -> GRASP at grasp height
+              closing in the last centimeters                (REACH again if the cube moved away)
+    GRASP     keep closing until the fingers hold the cube -> LIFT (REACH if it closed on nothing)
     LIFT      raise the cube to carry height              -> CARRY when high enough
     CARRY     move the cube above the target              -> LOWER when above the target
     LOWER     put the cube down on the target             -> RELEASE just above the table
-    RELEASE   open the gripper and wait                   -> RETREAT
+    RELEASE   open the gripper                            -> RETREAT when the fingers are open
     RETREAT   move up                                     -> REACH (try again if not successful)
 
 During LIFT, CARRY and LOWER the expert checks that the cube is still between the fingers;
@@ -56,11 +59,17 @@ class ExpertConfig:
     # When is a position "reached" [m].
     xy_tolerance: float = 0.008
     z_tolerance: float = 0.005
-    # Waiting times [control steps] for the gripper to close / open.
-    grasp_steps: int = 6
-    release_steps: int = 4
-    # Gripper narrower than this after closing means it closed on nothing [m].
+    # Start closing the gripper this far above the grasp height, while still descending [m].
+    # Closing early gives many "close" examples around the cube instead of a single one,
+    # so a network does not stop next to the cube with the gripper still open.
+    close_distance: float = 0.015
+    # Gripper opening [m]: below grasped_opening the fingers hold the 5 cm cube; below
+    # empty_grasp_opening they closed on nothing; above released_opening they let go.
+    grasped_opening: float = 0.055
     empty_grasp_opening: float = 0.01
+    released_opening: float = 0.065
+    # Safety net: give up a grasp that does not complete within this many steps.
+    max_grasp_steps: int = 20
     # While carrying, cube farther than this from the TCP means it was dropped [m].
     lost_cube_distance: float = 0.03
 
@@ -109,9 +118,11 @@ class ScriptedExpert:
             elif z_error < cfg.z_tolerance:
                 self._enter(Phase.GRASP)
         elif self.phase == Phase.GRASP:
-            if self._steps_in_phase >= cfg.grasp_steps:
-                closed_on_nothing = obs["gripper_opening"][0] < cfg.empty_grasp_opening
-                self._enter(Phase.REACH if closed_on_nothing else Phase.LIFT)
+            opening = obs["gripper_opening"][0]
+            if opening < cfg.empty_grasp_opening or self._steps_in_phase >= cfg.max_grasp_steps:
+                self._enter(Phase.REACH)  # closed on nothing (or stuck): try again
+            elif opening < cfg.grasped_opening:
+                self._enter(Phase.LIFT)  # the fingers hold the cube
         elif self.phase == Phase.LIFT:
             if tcp[2] > cfg.carry_height - 2 * cfg.z_tolerance:
                 self._enter(Phase.CARRY)
@@ -122,7 +133,7 @@ class ScriptedExpert:
             if z_error < cfg.z_tolerance:
                 self._enter(Phase.RELEASE)
         elif self.phase == Phase.RELEASE:
-            if self._steps_in_phase >= cfg.release_steps:
+            if obs["gripper_opening"][0] > cfg.released_opening:
                 self._enter(Phase.RETREAT)
         elif self.phase == Phase.RETREAT and z_error < 2 * cfg.z_tolerance:
             self._enter(Phase.REACH)
@@ -143,7 +154,8 @@ class ScriptedExpert:
         if self.phase == Phase.REACH:
             return above_cube, OPEN
         if self.phase == Phase.DESCEND:
-            return cube.copy(), OPEN
+            near_grasp_height = abs(cube[2] - tcp[2]) < cfg.close_distance
+            return cube.copy(), CLOSE if near_grasp_height else OPEN
         if self.phase == Phase.GRASP:
             return tcp.copy(), CLOSE  # hold still while the fingers close
         if self.phase == Phase.LIFT:
