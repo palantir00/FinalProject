@@ -36,6 +36,7 @@ import numpy as np
 
 from gesture_bc.sim.pick_place_env import PickPlaceConfig, PickPlaceEnv
 from gesture_bc.sim.rendering import VideoWriter, draw_text_lines
+from gesture_bc.ui.keys import collect_keys, window_closed
 from gesture_bc.utils.config import load_config
 
 WINDOW = "gesture_bc: pick and place (keyboard)"
@@ -43,23 +44,10 @@ CONTROL_CAMERA = "front"
 SIDE_CAMERAS = ["angled", "top"]
 VIDEO_CAMERA = "angled"
 VIDEO_DIR = Path("results/videos")
-ESC = 27
 # Holding a key makes Windows repeat it; ignore a toggle key (SPACE, P) for this long after
 # it fired, so one press toggles exactly once.
 TOGGLE_COOLDOWN_S = 0.5
 NO_LIMIT = 10**9  # "--max-steps 0": an episode limit that is never reached
-
-# cv2.waitKeyEx returns the full key code; arrow-key codes differ between platforms.
-ARROW_KEYS = {
-    2424832: "left",  # Windows
-    2490368: "up",
-    2555904: "right",
-    2621440: "down",
-    65361: "left",  # Linux (GTK)
-    65362: "up",
-    65363: "right",
-    65364: "down",
-}
 
 # Key -> direction of the TCP in world coordinates (x away from the robot base, y to the
 # robot's left, z up). In the front view +y is screen right and -x is "into the screen".
@@ -103,29 +91,6 @@ class UiState:
             return False
         self.last_toggle_time[key] = now
         return True
-
-
-def collect_keys(duration_s: float) -> set[str]:
-    """Names of the keys pressed during the next duration_s seconds.
-
-    Reading keys for the whole control period keeps the loop at a fixed rate and empties
-    the queue of auto-repeat events, so the robot stops as soon as a key is released.
-    Letters are lowercase; special keys are "left", "right", "up", "down", "esc", " ".
-    """
-    keys = set()
-    end = time.perf_counter() + duration_s
-    while True:
-        # Always wait at least 1 ms, even if rendering already used up the whole period:
-        # waitKeyEx is also where the window processes its events. A window that never
-        # gets here freezes and Windows reports it as "Not responding".
-        remaining_ms = max(1, int((end - time.perf_counter()) * 1000))
-        code = cv2.waitKeyEx(remaining_ms)
-        if code in ARROW_KEYS:
-            keys.add(ARROW_KEYS[code])
-        elif code != -1:
-            keys.add("esc" if code & 0xFF == ESC else chr(code & 0xFF).lower())
-        if time.perf_counter() >= end:
-            return keys
 
 
 def describe_keys(keys: set[str]) -> str:
@@ -249,7 +214,7 @@ def main() -> None:
 
         # 3) Wait for the rest of the control period, collecting key presses.
         ui.keys = collect_keys(period_s - (time.perf_counter() - tick_start))
-        if cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
+        if window_closed(WINDOW):
             break
 
     if video is not None:
