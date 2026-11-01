@@ -64,7 +64,16 @@ python scripts/view_env.py
 
 # Scripted-expert demonstrations (100 episodes, DART noise 0.3; --noise-std 0 for clean data)
 python scripts/collect_expert.py --videos 3
+python scripts/collect_expert.py --noise-std 0
 python scripts/inspect_dataset.py data/expert_100_noise0.3.hdf5 --replay 10
+
+# Feasibility experiment: train MLPs on the GPU, evaluate on 100 unseen scenes, plot, videos
+python scripts/run_feasibility.py
+python scripts/plot_feasibility.py
+python scripts/make_comparison_videos.py
+
+# Live demo: the trained network solves new random scenes
+python scripts/demo.py
 
 # Lint and tests
 ruff check .
