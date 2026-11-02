@@ -36,7 +36,7 @@ OBS_SIZES = {
 class PickPlaceConfig:
     """All parameters of the environment; configs/env/pick_place.yaml can override them."""
 
-    # Control: the policy acts 20 times per second, physics runs at 500 Hz in between.
+    # Control: the policy acts 20 times per second, physics runs at 1000 Hz in between.
     control_hz: int = 20
     # 30 s. The same limit is used to evaluate every policy, so it must leave room for slow
     # (human) demonstrations; it will be checked against the recorded demo lengths.
