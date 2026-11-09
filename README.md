@@ -52,7 +52,8 @@ pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu130
 pip install -r requirements-lock.txt
 pip install -e . --no-deps
 
-# Download the Franka Panda model (~36 MB, not stored in this repository)
+# Download the Franka Panda model (~36 MB) and MediaPipe's hand model (~7.8 MB);
+# neither is stored in this repository
 python scripts/fetch_assets.py
 
 # Check the environment: versions, GPU, MuJoCo viewer, camera
@@ -75,6 +76,9 @@ python scripts/make_comparison_videos.py
 # Live demo: the trained network solves new random scenes
 python scripts/demo.py
 
+# Hand teleoperation preview (webcam; nothing is recorded): C calibrates, pinch closes the gripper
+python scripts/teleop_hand.py --max-steps 0
+
 # Lint and tests
 ruff check .
 pytest
@@ -94,3 +98,9 @@ choose the base `python.exe` of Python 3.12 (`check_setup.py` prints its path), 
   [Apache License 2.0](https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/franka_emika_panda/LICENSE).
   The model is not redistributed here: `scripts/fetch_assets.py` downloads it, together with its
   license file, from the pinned commit.
+- **MediaPipe Hand Landmarker model** (`hand_landmarker.task`, float16, version 1) by Google,
+  licensed under the Apache License 2.0 according to its
+  [model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Hand%20Tracking%20(Lite_Full)%20with%20Fairness%20Oct%202021.pdf).
+  Not redistributed here: `scripts/fetch_assets.py` downloads it from
+  [MediaPipe's model storage](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker)
+  and checks its SHA-256.
