@@ -26,7 +26,7 @@ from enum import Enum
 
 import numpy as np
 
-OPEN, CLOSE = -1.0, 1.0
+from gesture_bc.control import CLOSE, OPEN, pd_move_action
 
 
 class Phase(Enum):
@@ -169,6 +169,6 @@ class ScriptedExpert:
         return above_cube, OPEN  # RETREAT
 
     def _move_towards(self, goal: np.ndarray, obs: dict[str, np.ndarray]) -> np.ndarray:
-        """PD controller: towards the goal, damped by the TCP velocity, scaled to [-1, 1]."""
-        command = self.config.kp * (goal - obs["tcp_pos"]) - self.config.kd * obs["tcp_vel"]
-        return np.clip(command / self.max_step_m, -1.0, 1.0)
+        """PD controller towards the goal; hand teleoperation uses the same one (control.py)."""
+        cfg = self.config
+        return pd_move_action(goal, obs["tcp_pos"], obs["tcp_vel"], cfg.kp, cfg.kd, self.max_step_m)
