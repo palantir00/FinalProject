@@ -1,6 +1,7 @@
 """One-Euro filter (Casiez, Roussel, Vogel, CHI 2012): smoothing of noisy real-time signals.
 
-Ported from the earlier Gesture-to-Geometry project (app/src/cv/filters/oneEuro.ts).
+Ported from the earlier Gesture-to-Geometry project (app/src/cv/filters/oneEuro.ts at the git
+tag v1-gesture-to-geometry).
 
 An ordinary low-pass filter must choose between jitter and lag: a low cutoff frequency
 removes jitter, but fast movements then trail behind. The One-Euro filter adapts the cutoff
