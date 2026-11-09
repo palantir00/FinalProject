@@ -1,0 +1,23 @@
+# MLP behavior cloning (gesture_bc.train.trainer.TrainConfig).
+# Every key is optional: a missing key keeps the default from TrainConfig.
+
+# Data
+dataset: data/expert_100_noise0.3.hdf5
+max_demos: 0               # 0 = all successful demos
+val_fraction: 0.1          # share of episodes (not steps) used for validation
+split_seed: 0              # the same split for every training seed
+
+# Network: 19 -> 256 -> 256 -> 256 -> 4 (about 137k parameters)
+hidden_sizes: [256, 256, 256]
+dropout: 0.1
+
+# Optimization
+learning_rate: 0.001
+weight_decay: 0.0001
+batch_size: 256
+max_epochs: 400
+patience: 40               # early stopping
+gripper_loss_weight: 1.0
+
+device: auto               # GPU if available, else CPU
+seed: 0                    # training seed

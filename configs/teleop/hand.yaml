@@ -1,0 +1,25 @@
+# Hand teleoperation (gesture_bc.teleop.hand_teleop.HandTeleopConfig).
+# Every key is optional: a missing key keeps the default from HandTeleopConfig.
+
+camera_index: 0              # 0 = built-in webcam; try 1, 2 for an external camera
+
+# Mapping [m of TCP motion per unit of hand motion]
+lateral_gain: 1.0            # palm across the whole image width -> 1 m left/right
+vertical_gain: 1.5           # palm up/down by one image width   -> 1.5 m up/down
+                             # (the image is lower than wide, so up/down needs more gain)
+depth_gain: 0.5              # palm 20% larger (closer)          -> 0.1 m towards you
+
+# Gripper: pinch = thumb-index tip distance / palm size (about 0.1 pinched, 1 open)
+close_pinch: 0.3             # pinch below this closes the gripper
+open_pinch: 0.45             # pinch above this opens it (in between: no change)
+
+# One-Euro filter on palm position and size
+filter_min_cutoff_hz: 1.0    # lower = less jitter when still, more lag
+filter_beta: 5.0             # higher = less lag when moving fast
+filter_d_cutoff_hz: 1.0
+
+lost_timeout_s: 0.25         # no hand for this long: the robot holds its last goal
+
+# PD controller: the same gains as the scripted expert (configs/expert/scripted.yaml)
+kp: 0.8
+kd: 0.06

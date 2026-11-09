@@ -1,0 +1,25 @@
+# Scripted expert (gesture_bc.expert.scripted_expert.ExpertConfig).
+# Every key is optional: a missing key keeps the default from ExpertConfig. Units: m, steps.
+
+# PD controller in TCP space
+kp: 0.8                    # fraction of the remaining distance commanded per step
+kd: 0.06                   # damping by the TCP velocity [s]; removes overshoot
+
+# Heights
+hover_height: 0.08         # above the cube center before descending
+carry_height: 0.15         # TCP height above the table while carrying
+place_clearance: 0.005     # gap under the cube when it is released
+
+# When is a position reached
+xy_tolerance: 0.008
+z_tolerance: 0.005
+
+# Gripper decisions (all based on what the observation shows, no hidden counters)
+close_distance: 0.015      # start closing this far above the grasp height
+grasped_opening: 0.055     # opening below this: the fingers hold the 5 cm cube -> lift
+empty_grasp_opening: 0.01  # opening below this: closed on nothing -> try again
+released_opening: 0.065    # opening above this: the cube was let go
+max_grasp_steps: 20        # safety net for a grasp that never completes
+
+# Failure detection
+lost_cube_distance: 0.03   # cube dropped while carrying
