@@ -23,13 +23,15 @@ jobs:
           pip install -r requirements-lock.txt
           pip install -e . --no-deps
 
-      - name: Cache Franka Panda model
+      - name: Cache third-party models (Panda, MediaPipe hand)
         uses: actions/cache@v6
         with:
-          path: src/gesture_bc/sim/assets/franka_emika_panda
-          key: menagerie-panda-${{ hashFiles('scripts/fetch_assets.py') }}
+          path: |
+            src/gesture_bc/sim/assets/franka_emika_panda
+            src/gesture_bc/teleop/assets/hand_landmarker.task
+          key: models-${{ hashFiles('scripts/fetch_assets.py') }}
 
-      - name: Download Franka Panda model
+      - name: Download third-party models
         run: python scripts/fetch_assets.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
