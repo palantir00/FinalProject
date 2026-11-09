@@ -1,42 +1,26 @@
-# Gesture-to-Geometry (Gesture-to-Geometry)
+# Robot learning from hand-gesture demonstrations
 
-Projekt „Gesture-to-Geometry”: tworzenie i modyfikacja proceduralnych brył 3D gestami dłoni (kamera) + natychmiastowa analiza geometryczna (pole, objętość) oraz tryby Measure/Slice.
+Engineering thesis (work in progress): a simulated Franka Panda arm (MuJoCo) is teleoperated
+with the hand, tracked by an ordinary RGB camera (MediaPipe), the demonstrations are recorded,
+and a policy is trained with behavior cloning (an MLP and a small Transformer with action
+chunking). The central experiment compares policies learned from a scripted expert and from a
+human teleoperating with gestures, with the same number of demonstrations and the same test scenes.
 
-Repozytorium jest zainicjowane zgodnie ze specyfikacją z pracy inżynierskiej:
-- **Struktura**: patrz `docs/SPEC_EXTRACTED.txt`, sekcja „5) Repozytorium – struktura”.
-- **Protokół gestów**: patrz `docs/SPEC_EXTRACTED.txt`, sekcja „9) Protokół gestów”.
+Status: the scripted expert, the MLP pipeline (99-100% success on 100 unseen scenes, see
+`results/feasibility/`) and live hand teleoperation work; recording human demonstrations is next.
 
-## Uruchomienie (frontend)
+| Folder | Contents |
+|---|---|
+| `src/gesture_bc/` | the Python package: simulation, expert, teleoperation, data, models, training, evaluation |
+| `configs/` | YAML parameters of the environment, expert, teleoperation and training |
+| `scripts/` | command-line entry points (see below) |
+| `tests/` | pytest suite (runs in CI without GPU or display) |
+| `results/` | small result files and plots committed for reference |
 
-Frontend (Vite + React + TypeScript) znajduje się w folderze `app/`.
+The previous topic of this repository (Gesture-to-Geometry, a browser app) is preserved at the
+git tag `v1-gesture-to-geometry`.
 
-1) Zainstaluj Node.js (LTS) + npm  
-2) W katalogu `app/`:
-
-```bash
-npm install
-npm run dev
-```
-
-## Szybka nawigacja po kodzie
-
-- `app/src/cv/HandTracker.ts`: pipeline wideo + MediaPipe Hands (landmarki)
-- `app/src/cv/filters/oneEuro.ts`: One-Euro Filter (stabilizacja sygnału)
-- `app/src/gestures/*`: mapping landmarków → gesty + FSM trybów
-- `app/src/three/SceneManager.ts`: Three.js scena + pętla render
-- `app/src/geometry/analytics.ts`: pole/objętość (sześcian, kula, walec)
-- `app/src/ui/*`: HUD (autolabels) + tutorial overlay (MVP)
-
----
-
-## Robot learning from hand-gesture demonstrations (work in progress)
-
-New thesis direction: a simulated Franka Panda arm (MuJoCo) is teleoperated with hand gestures
-tracked by an RGB camera (MediaPipe), the demonstrations are recorded, and a policy is trained
-with behavior cloning (MLP and a small Transformer with action chunking).
-The Python code lives in `src/gesture_bc/`.
-
-### Setup (Windows, PowerShell)
+## Setup (Windows, PowerShell)
 
 Requires Python 3.11 or 3.12 and, for GPU training, an NVIDIA driver supporting CUDA 13.0.
 
@@ -79,8 +63,9 @@ python scripts/demo.py
 # Hand teleoperation preview (webcam; nothing is recorded): C calibrates, pinch closes the gripper
 python scripts/teleop_hand.py --max-steps 0
 
-# Lint and tests
+# Lint, formatting and tests
 ruff check .
+ruff format --check .
 pytest
 ```
 
@@ -90,7 +75,12 @@ GPU, where a frame takes ~60 ms instead of ~2 ms and the windows become unusable
 choose the base `python.exe` of Python 3.12 (`check_setup.py` prints its path), then
 *Options > High performance*.
 
-### Third-party assets
+**`ImportError: initialization failed` when importing MuJoCo:** Windows 11 *Smart App Control*
+blocks MuJoCo's unsigned libraries (the underlying error reads "An Application Control policy has
+blocked this file"). It can only be turned off as a whole: *Windows Security > App & browser
+control > Smart App Control settings > Off*.
+
+## Third-party assets
 
 - **Franka Emika Panda model**: from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie/tree/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/franka_emika_panda)
   (commit `62ab00f`), developed by Franka Emika and derived from the
